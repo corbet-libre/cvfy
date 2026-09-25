@@ -1,0 +1,18 @@
+[package]
+name = "cvfy"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Verifier for zero-knowledge accounting: checks a proof against a policy, pure and without trace"
+license = "LGPL-3.0-only WITH LGPL-3.0-linking-exception"
+repository = "https://github.com/corbet-foss/cvfy"
+readme = "README.md"
+publish = false
+include = ["Cargo.toml", "src/**", "README.md", "LICENSE", "LICENSE.md", "LICENSES/LGPL-3.0-only.txt", "LICENSES/LGPL-3.0-linking-exception.txt", "LICENSES/GPL-3.0-only.txt"]
+
+[lib]
+crate-type = ["rlib"]
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
