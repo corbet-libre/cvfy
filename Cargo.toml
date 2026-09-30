@@ -16,3 +16,12 @@ crate-type = ["rlib"]
 [lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"
+
+[dependencies]
+czkp = { git = "https://github.com/corbet-foss/czkp", rev = "8444749e98ea192353ccc82c56a33a43fcaa588c" }
+data-encoding = "2.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
