@@ -43,7 +43,7 @@ impl ProcessVerifier {
             || config.timeout.is_zero()
             || config.timeout > Duration::from_secs(300)
             || !(1..=64).contains(&config.maximum_parallel)
-            || !(1..=1024 * 1024).contains(&config.max_proof_bytes)
+            || !(1..=4 * 1024 * 1024).contains(&config.max_proof_bytes)
             || !(64..=4096).contains(&config.node_heap_megabytes)
         {
             return Err(Error::InvalidInput);
