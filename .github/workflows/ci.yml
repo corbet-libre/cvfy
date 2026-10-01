@@ -4,6 +4,7 @@ permissions:
 concurrency:
   group: ci
   cancel-in-progress: false
+  queue: max
 jobs:
   resolve:
     runs-on: ubuntu-latest
@@ -18,7 +19,9 @@ jobs:
       with:
         node-version: 24
     - name: Resolve one fresh dependency snapshot
-      run: 'cargo update
+      run: 'python3 .github/check-first-party.py
+
+        cargo update
 
         rustc --version > resolver.txt
 
@@ -34,7 +37,7 @@ jobs:
 
         cd fixture-source
 
-        npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+        npm update --package-lock-only --ignore-scripts --no-audit --no-fund
 
         git archive HEAD > ../fixture-source.tar
 
@@ -212,7 +215,6 @@ jobs:
   push:
     branches:
     - main
-    - ci/**
   pull_request: null
   workflow_dispatch: null
 env:
