@@ -95,7 +95,7 @@ dependencies = [
 [[package]]
 name = "czkp"
 version = "0.0.0"
-source = "git+https://github.com/corbet-foss/czkp?rev=8444749e98ea192353ccc82c56a33a43fcaa588c#8444749e98ea192353ccc82c56a33a43fcaa588c"
+source = "git+https://github.com/corbet-foss/czkp?rev=e1782da1f7193a26ca0aea23137784896b780c03#e1782da1f7193a26ca0aea23137784896b780c03"
 dependencies = [
  "data-encoding",
  "ed25519-dalek",
