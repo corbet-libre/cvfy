@@ -26,6 +26,16 @@ class GateTests(unittest.TestCase):
     def test_complete_source_report(self):
         self.check()
 
+    def test_single_file_upstream_report_without_heading(self):
+        self.check(text=TEXT.split('\n', 1)[1])
+        raw = copy.deepcopy(RAW)
+        other = copy.deepcopy(raw['data'][0]['files'][0])
+        other['filename'] = '/workspace/src/other.rs'
+        raw['data'][0]['files'].append(other)
+        with self.assertRaises(ValueError):
+            self.check(lcov=LCOV + LCOV.replace(SOURCE, other['filename']), raw=raw,
+                       text=TEXT.split('\n', 1)[1])
+
     def test_malformed_or_missing_records(self):
         for data in ['', LCOV.replace('DA:2,2\n', ''), LCOV.replace('end_of_record\n', ''),
                      LCOV + LCOV, LCOV.replace('DA:1,1', 'DA:1,-1'),
