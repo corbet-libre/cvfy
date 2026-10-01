@@ -7,3 +7,8 @@ Survey (2026-09-30): retain [Noir](https://github.com/noir-lang/noir) / [Barrete
 Source extraction: maintained adapters from cfrm; substantive accounting policy remains in cblc. This package is not independently a complete private-account relation.
 
 Serialization is generic; the byte-oriented process driver is shared across statement types. Worker failures are reduced to constant public errors, including broken pipes and child-thread failure, with no error payload retained. CI reuses only unchanged public proof artifacts keyed to the complete resolved fixture source and npm lock, and always runs the current verifier against them.
+
+The complete serialized child request is bounded to twice the configured maximum
+proof bytes plus 64 KiB of public-statement/envelope space. The standard library
+fixed slice writer rejects overflow before spawning a process; it cannot grow the
+serialization buffer. Serialization failure releases the shared worker permit.

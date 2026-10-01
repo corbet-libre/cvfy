@@ -37,6 +37,10 @@ fn reject_bad_configuration_and_failed_worker() {
         verifier.verify(&invalid_statement, &[1]),
         Err(Error::InvalidInput)
     );
+    assert_eq!(
+        verifier.verify(&"x".repeat(128 * 1024), &[1]),
+        Err(Error::InvalidInput)
+    );
     assert_eq!(verifier.verify(&1, &[1]), Err(Error::CryptoProvider));
     fs::write(
         &config.script,

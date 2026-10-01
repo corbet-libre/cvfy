@@ -84,12 +84,23 @@ impl ProcessVerifier {
             proof: String,
             proof_scope: &'a ProofScope,
         }
-        let bytes = serde_json::to_vec(&Request {
-            statement,
-            proof: data_encoding::HEXLOWER.encode(proof),
-            proof_scope: &self.config.scope,
-        })
-        .map_err(|_| Error::InvalidInput)?;
+        // The fixed std slice writer refuses oversized public statements before
+        // an unbounded allocation or process spawn. Proof hex has an exact 2x
+        // expansion; 64 KiB covers the public statement and envelope metadata.
+        let limit = self.config.max_proof_bytes * 2 + 64 * 1024;
+        let mut bytes = vec![0; limit];
+        let mut remaining = bytes.as_mut_slice();
+        serde_json::to_writer(
+            &mut remaining,
+            &Request {
+                statement,
+                proof: data_encoding::HEXLOWER.encode(proof),
+                proof_scope: &self.config.scope,
+            },
+        )
+        .or(Err(Error::InvalidInput))?;
+        let written = limit - remaining.len();
+        bytes.truncate(written);
         self.verify_bytes(bytes)
     }
 

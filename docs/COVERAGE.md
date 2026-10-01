@@ -20,3 +20,14 @@ Cargo.lock, with exactly one source per first-party crate. Dependabot maintains
 committed snapshots; CI refreshes once per run and retains the tested snapshot.
 Auto-merge requires protected main and successful substantive checks on the
 exact current Dependabot head. It never executes PR code with write permissions.
+
+## Emitted source counters
+
+The same execution exports raw LLVM JSON, LCOV and annotated source. The strict
+gate requires every emitted production line and both outcomes at every branch
+location, with no exclusions. It cross-checks exact file and line inventories,
+branch coordinates, summaries and hit status across the reports, rejecting missing
+or duplicate input. Generic instantiation summaries remain evidence, not source
+line counts: df40d10 measured89/90 raw lines while all85 emitted source lines and
+36/36 branches executed. These figures are kept distinct. No successful test or
+compiler check is treated as coverage.

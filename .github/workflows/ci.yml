@@ -187,8 +187,12 @@ jobs:
     - name: Retain source coverage diagnostics from the same execution
       run: cargo llvm-cov report --branch --ignore-filename-regex '/tests/' --lcov
         --output-path coverage.lcov
-    - name: Require complete line and branch coverage
-      run: python3 .github/check-coverage.py coverage.json
+    - name: Retain independent annotated source inventory
+      run: cargo llvm-cov report --branch --ignore-filename-regex '/tests/' --text --output-path coverage.txt
+    - name: Require complete source line and branch coverage
+      run: |
+        python3 .github/test-source-coverage.py
+        python3 .github/check-source-coverage.py coverage.lcov coverage.json coverage.txt
     - uses: actions/upload-artifact@v4
       if: always()
       with:
@@ -199,7 +203,9 @@ jobs:
 
           resolver.txt
 
-          coverage.lcov'
+          coverage.lcov
+
+          coverage.txt'
         retention-days: 7
     env: *id003
 'on':
