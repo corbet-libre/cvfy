@@ -115,9 +115,16 @@ jobs:
     - &id002
       run: npm ci --ignore-scripts --no-audit --no-fund
       working-directory: fixture-source
+    - uses: actions/cache@v4
+      id: proofs
+      with:
+        path: fixture-source/.proof-test
+        key: public-account-proofs-v1-${{ runner.os }}-${{ hashFiles('fixture-source.tar', 'fixture-package-lock.json') }}
     - name: Generate real Noir account proofs with the maintained holder
+      if: steps.proofs.outputs.cache-hit != 'true'
       run: node tests/real-proof.mjs
       working-directory: fixture-source
+    - run: node --input-type=module -e 'import {readFileSync,writeFileSync} from "node:fs"; import {resolve} from "node:path"; const p=resolve("fixture-source/.proof-test/config.json"); const c=JSON.parse(readFileSync(p));c.directory=resolve("fixture-source/.proof-test");writeFileSync(p,JSON.stringify(c));'
     - run: cargo test --locked
     - uses: actions/upload-artifact@v4
       if: failure()

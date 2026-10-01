@@ -64,14 +64,26 @@ fn reject_bad_configuration_and_failed_worker() {
         }
         assert!(ProcessVerifier::new(bad).is_err());
     }
-    for output in ["", "{}", "null", "{\"verified\":false,\"proofScope\":{\"circuitDigest\":[],\"verifyingKeyDigest\":[]}}"] {
-        fs::write(&config.script, format!("process.stdin.resume(); process.stdout.write({output:?});")).unwrap();
+    for output in [
+        "",
+        "{}",
+        "null",
+        "{\"verified\":false,\"proofScope\":{\"circuitDigest\":[],\"verifyingKeyDigest\":[]}}",
+    ] {
+        fs::write(
+            &config.script,
+            format!("process.stdin.resume(); process.stdout.write({output:?});"),
+        )
+        .unwrap();
         assert_eq!(verifier.verify(&1, &[1]), Err(Error::CryptoProvider));
     }
     // A nonexistent executable is a transport failure, never proof acceptance.
     let mut unavailable = config;
     unavailable.node = dir.path().join("absent-node");
-    assert_eq!(ProcessVerifier::new(unavailable).unwrap().verify(&1, &[1]), Err(Error::CryptoProvider));
+    assert_eq!(
+        ProcessVerifier::new(unavailable).unwrap().verify(&1, &[1]),
+        Err(Error::CryptoProvider)
+    );
 }
 
 #[test]
@@ -107,6 +119,19 @@ fn transport_delivers_a_bounded_multi_proof_bundle_without_accepting_it() {
         verifier.verify(&1, &vec![5; 4 * 1024 * 1024 + 1]),
         Err(Error::InvalidInput)
     );
+    // Closing the real read end while a large write is pending must fail and
+    // release capacity; no fabricated successful worker response is involved.
+    fs::write(&config.script, "process.exit(1);").unwrap();
+    assert_eq!(
+        verifier.verify(&1, &vec![5; 2 * 1024 * 1024]),
+        Err(Error::CryptoProvider)
+    );
+    fs::write(
+        &config.script,
+        "process.stdin.resume(); process.exitCode=1;",
+    )
+    .unwrap();
+    assert_eq!(verifier.verify(&1, &[1]), Err(Error::CryptoProvider));
     let mut oversized = config;
     oversized.max_proof_bytes += 1;
     assert!(ProcessVerifier::new(oversized).is_err());
@@ -146,7 +171,11 @@ fn bounded_process_capacity_is_shared_and_released_after_timeout() {
     }
     assert_eq!(verifier.verify(&1, &[1]), Err(Error::Capacity));
     assert_eq!(worker.join().unwrap(), Err(Error::CryptoProvider));
-    fs::write(&config.script, "process.stdin.resume(); process.exitCode=1;").unwrap();
+    fs::write(
+        &config.script,
+        "process.stdin.resume(); process.exitCode=1;",
+    )
+    .unwrap();
     assert_eq!(verifier.verify(&1, &[1]), Err(Error::CryptoProvider));
 }
 
@@ -173,7 +202,10 @@ fn valid_json_cannot_turn_refusal_or_foreign_scope_into_acceptance() {
         let verdict = serde_json::json!({"verified": verified, "proofScope": scope});
         fs::write(
             &config.script,
-            format!("process.stdin.resume(); process.stdout.write({:?});", verdict.to_string()),
+            format!(
+                "process.stdin.resume(); process.stdout.write({:?});",
+                verdict.to_string()
+            ),
         )
         .unwrap();
         assert_eq!(verifier.verify(&1, &[1]), Err(Error::CryptoProvider));

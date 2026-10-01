@@ -90,6 +90,10 @@ impl ProcessVerifier {
             proof_scope: &self.config.scope,
         })
         .map_err(|_| Error::InvalidInput)?;
+        self.verify_bytes(bytes)
+    }
+
+    fn verify_bytes(&self, bytes: Vec<u8>) -> Result<(), Error> {
         let mut child = Command::new(&self.config.node)
             .arg(format!(
                 "--max-old-space-size={}",
@@ -103,7 +107,7 @@ impl ProcessVerifier {
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()
-            .map_err(|_| Error::CryptoProvider)?;
+            .or(Err(Error::CryptoProvider))?;
         // Dedicated bounded readers avoid pipe deadlock. Kill and reap on every
         // deadline/error before joining them. The shipped worker spawns no children.
         let mut stdin = child.stdin.take().ok_or(Error::CryptoProvider)?;
@@ -128,8 +132,8 @@ impl ProcessVerifier {
         let wrote = writer.join().ok().is_some_and(|v| v.is_ok());
         let output = reader
             .join()
-            .map_err(|_| Error::CryptoProvider)?
-            .map_err(|_| Error::CryptoProvider)?;
+            .or(Err(Error::CryptoProvider))?
+            .or(Err(Error::CryptoProvider))?;
         if !wrote || !status.is_some_and(|v| v.success()) || output.len() > 4096 {
             return Err(Error::CryptoProvider);
         }
@@ -139,8 +143,7 @@ impl ProcessVerifier {
             verified: bool,
             proof_scope: ProofScope,
         }
-        let verdict: Verdict =
-            serde_json::from_slice(&output).map_err(|_| Error::CryptoProvider)?;
+        let verdict: Verdict = serde_json::from_slice(&output).or(Err(Error::CryptoProvider))?;
         if !verdict.verified || verdict.proof_scope != self.config.scope {
             return Err(Error::CryptoProvider);
         }
