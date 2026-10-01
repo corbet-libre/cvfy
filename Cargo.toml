@@ -2,7 +2,7 @@
 name = "cvfy"
 version = "0.0.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.95"
 description = "Verifier for zero-knowledge accounting: checks a proof against a policy, pure and without trace"
 license = "LGPL-3.0-only WITH LGPL-3.0-linking-exception"
 repository = "https://github.com/corbet-foss/cvfy"

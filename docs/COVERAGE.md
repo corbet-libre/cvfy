@@ -1,7 +1,6 @@
 # Coverage contract
 
-CI targets 100% of reachable production lines and branches. Stable Rust runs
-the existing native and wasm checks. Nightly Rust is used only for LLVM branch
+CI targets 100% of reachable production lines and branches. Stable Rust runs the native process adapter against actual public Noir account proofs. Nightly Rust is used only for LLVM branch
 instrumentation, which currently requires it. Both jobs use the same resolved
 Cargo.lock snapshot; all build and test commands after resolution use --locked.
 

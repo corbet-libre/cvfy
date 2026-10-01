@@ -72,13 +72,23 @@ impl ProcessVerifier {
             return Err(Error::InvalidInput);
         }
         self.active
-            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |n| {
                 (n < self.config.maximum_parallel).then_some(n + 1)
             })
             .map_err(|_| Error::Capacity)?;
         let _permit = ActivePermit(self.active.clone());
-        let bytes = serde_json::to_vec(&serde_json::json!({"statement": statement,
-            "proof": data_encoding::HEXLOWER.encode(proof), "proofScope": self.config.scope}))
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Request<'a, S> {
+            statement: &'a S,
+            proof: String,
+            proof_scope: &'a ProofScope,
+        }
+        let bytes = serde_json::to_vec(&Request {
+            statement,
+            proof: data_encoding::HEXLOWER.encode(proof),
+            proof_scope: &self.config.scope,
+        })
         .map_err(|_| Error::InvalidInput)?;
         let mut child = Command::new(&self.config.node)
             .arg(format!(

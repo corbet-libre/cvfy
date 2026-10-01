@@ -2,8 +2,8 @@ name: ci
 permissions:
   contents: read
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci
+  cancel-in-progress: false
 jobs:
   resolve:
     runs-on: ubuntu-latest
@@ -14,19 +14,43 @@ jobs:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         persist-credentials: false
     - uses: dtolnay/rust-toolchain@stable
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
     - name: Resolve one fresh dependency snapshot
-      run: |-
-        cargo update
+      run: 'cargo update
+
         rustc --version > resolver.txt
+
         cargo --version >> resolver.txt
+
         date -u +%FT%TZ >> resolver.txt
-        sha256sum Cargo.lock >> resolver.txt
+
+        sha256sum Cargo.lock >> resolver.txt'
+    - name: Resolve real public accounting fixture source once
+      run: 'git clone --depth 1 https://github.com/corbet-libs/cblc.git fixture-source
+
+        git -C fixture-source rev-parse HEAD > fixture-source.txt
+
+        cd fixture-source
+
+        npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+        git archive HEAD > ../fixture-source.tar
+
+        cp package-lock.json ../fixture-package-lock.json'
     - uses: actions/upload-artifact@v4
       with:
         name: resolved-lock
-        path: |-
-          Cargo.lock
+        path: 'Cargo.lock
+
           resolver.txt
+
+          fixture-source.tar
+
+          fixture-source.txt
+
+          fixture-package-lock.json'
         retention-days: 7
   audit:
     runs-on: ubuntu-latest
@@ -39,7 +63,7 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         name: resolved-lock
-    - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0
+    - uses: taiki-e/install-action@v2
       with:
         tool: cargo-deny
     - run: cargo deny --locked check advisories licenses
@@ -61,7 +85,7 @@ jobs:
     - resolve
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
     - uses: actions/checkout@v4
       with:
@@ -70,19 +94,47 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         name: resolved-lock
-    - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
+    - uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
         components: rustfmt, clippy
-    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-    - run: rustc --version && cargo fmt --check
+    - uses: Swatinem/rust-cache@v2
+    - run: 'rustc --version
+
+        cargo fmt --check || { cargo fmt; git diff > formatting.patch; exit 1; }'
     - run: cargo clippy --locked --all-targets -- -D warnings
-    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+    - uses: actions/setup-node@v4
       with:
         node-version: 24
+    - &id001
+      run: 'mkdir -p fixture-source
+
+        tar -xf fixture-source.tar -C fixture-source
+
+        cp fixture-package-lock.json fixture-source/package-lock.json'
+    - &id002
+      run: npm ci --ignore-scripts --no-audit --no-fund
+      working-directory: fixture-source
+    - name: Generate real Noir account proofs with the maintained holder
+      run: node tests/real-proof.mjs
+      working-directory: fixture-source
     - run: cargo test --locked
+    - uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: formatting
+        path: formatting.patch
+    - uses: actions/upload-artifact@v4
+      with:
+        name: public-proofs
+        path: fixture-source/.proof-test/
+        include-hidden-files: true
+        if-no-files-found: error
+        retention-days: 7
     needs:
     - resolve
+    env: &id003
+      CVFY_FIXTURE_SOURCE: ${{ github.workspace }}/fixture-source
   coverage:
     needs:
     - resolve
@@ -97,6 +149,18 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         name: resolved-lock
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
+    - *id001
+    - *id002
+    - uses: actions/download-artifact@v4
+      with:
+        name: public-proofs
+        path: fixture-source/.proof-test
+    - run: 'node --input-type=module -e ''import {readFileSync,writeFileSync} from
+        "node:fs"; import {resolve} from "node:path"; const p=resolve("fixture-source/.proof-test/config.json");
+        const c=JSON.parse(readFileSync(p));c.directory=resolve("fixture-source/.proof-test");writeFileSync(p,JSON.stringify(c));'' '
     - uses: dtolnay/rust-toolchain@nightly
       with:
         components: llvm-tools-preview
@@ -106,25 +170,36 @@ jobs:
     - uses: taiki-e/install-action@v2
       with:
         tool: cargo-llvm-cov
-    - run: |-
-        rustc --version
-        cargo llvm-cov --version
+    - run: 'rustc --version
+
+        cargo llvm-cov --version'
     - name: Measure real native round trips and failure paths
-      run: cargo llvm-cov --locked --workspace --all-features --branch --no-cfg-coverage --no-cfg-coverage-nightly
-        --ignore-filename-regex '/tests/' --json --output-path coverage.json
+      run: cargo llvm-cov --locked --workspace --all-features --branch --no-cfg-coverage
+        --no-cfg-coverage-nightly --ignore-filename-regex '/tests/' --json --output-path
+        coverage.json
+    - name: Retain source coverage diagnostics from the same execution
+      run: cargo llvm-cov report --branch --ignore-filename-regex '/tests/' --lcov
+        --output-path coverage.lcov
     - name: Require complete line and branch coverage
       run: python3 .github/check-coverage.py coverage.json
     - uses: actions/upload-artifact@v4
       if: always()
       with:
         name: coverage
-        path: |-
-          coverage.json
+        path: 'coverage.json
+
           Cargo.lock
+
           resolver.txt
+
+          coverage.lcov'
         retention-days: 7
+    env: *id003
 'on':
-  push: null
+  push:
+    branches:
+    - main
+    - ci/**
   pull_request: null
   workflow_dispatch: null
 env:
