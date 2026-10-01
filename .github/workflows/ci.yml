@@ -9,12 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         persist-credentials: false
     - uses: dtolnay/rust-toolchain@stable
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v7
       with:
         node-version: 24
     - name: Resolve one fresh dependency snapshot
@@ -39,7 +39,7 @@ jobs:
         git archive HEAD > ../fixture-source.tar
 
         cp package-lock.json ../fixture-package-lock.json'
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: resolved-lock
         path: 'Cargo.lock
@@ -56,11 +56,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         persist-credentials: false
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: resolved-lock
     - uses: taiki-e/install-action@v2
@@ -73,11 +73,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         persist-credentials: false
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: resolved-lock
     - run: python3 .github/check-first-party.py
@@ -87,11 +87,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         persist-credentials: false
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: resolved-lock
     - uses: dtolnay/rust-toolchain@stable
@@ -103,7 +103,7 @@ jobs:
 
         cargo fmt --check || { cargo fmt; git diff > formatting.patch; exit 1; }'
     - run: cargo clippy --locked --all-targets -- -D warnings
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v7
       with:
         node-version: 24
     - &id001
@@ -115,7 +115,7 @@ jobs:
     - &id002
       run: npm ci --ignore-scripts --no-audit --no-fund
       working-directory: fixture-source
-    - uses: actions/cache@v4
+    - uses: actions/cache@v6
       id: proofs
       with:
         path: fixture-source/.proof-test
@@ -126,12 +126,12 @@ jobs:
       working-directory: fixture-source
     - run: node --input-type=module -e 'import {readFileSync,writeFileSync} from "node:fs"; import {resolve} from "node:path"; const p=resolve("fixture-source/.proof-test/config.json"); const c=JSON.parse(readFileSync(p));c.directory=resolve("fixture-source/.proof-test");writeFileSync(p,JSON.stringify(c));'
     - run: cargo test --locked
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: failure()
       with:
         name: formatting
         path: formatting.patch
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: public-proofs
         path: fixture-source/.proof-test/
@@ -149,19 +149,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         persist-credentials: false
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: resolved-lock
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v7
       with:
         node-version: 24
     - *id001
     - *id002
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: public-proofs
         path: fixture-source/.proof-test
@@ -193,7 +193,7 @@ jobs:
       run: |
         python3 .github/test-source-coverage.py
         python3 .github/check-source-coverage.py coverage.lcov coverage.json coverage.txt
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: coverage
