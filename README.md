@@ -13,3 +13,5 @@ Copyright 2026 Julian Y. Richard Corbet. LGPL-3.0-only WITH LGPL-3.0-linking-exc
 Dependency updates follow main and are tested against one CI-resolved lockfile.
 Line and branch coverage target 100%; failures remain blocking. See
 [the coverage contract](docs/COVERAGE.md) for measurement and exclusions.
+
+The bounded native process transport is implemented once in `czkp::process` and reexported here. Server callers continue through Balance; member counterpart verification consumes the same neutral core from Wallet.
