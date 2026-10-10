@@ -6,9 +6,6 @@ export CARGO_TERM_COLOR="${CARGO_TERM_COLOR:-always}"
 CVFY_LAST_GATE='init'
 trap 'rc=$?; echo "cvfy:last_gate=$CVFY_LAST_GATE exit=$rc"' EXIT
 
-cargo update
-cp Cargo.lock "$ARTIFACT_ROOT/Cargo.lock"
-
 CVFY_LAST_GATE='first-party'
 python3 .github/check-first-party.py
 CVFY_LAST_GATE='rustc-version'
