@@ -104,17 +104,17 @@ fn input_limits_refuse_before_dispatch_and_leave_capacity_available() {
         Err(Error::InvalidInput)
     );
     assert_eq!(
-        verifier.verify_batch_before(&vec![(&fields[..], &proof[..]); 66], deadline),
+        verifier.verify_batch_before(&[(&fields[..], &proof[..]); 66], deadline),
         Err(Error::InvalidInput)
     );
     let many = vec![[0; 32]; 4096];
     assert_eq!(
-        verifier.verify_batch_before(&vec![(&many[..], &proof[..]); 9], deadline),
+        verifier.verify_batch_before(&[(&many[..], &proof[..]); 9], deadline),
         Err(Error::InvalidInput)
     );
     let large = vec![0; 1024 * 1024];
     assert_eq!(
-        verifier.verify_batch_before(&vec![(&fields[..], &large[..]); 5], deadline),
+        verifier.verify_batch_before(&[(&fields[..], &large[..]); 5], deadline),
         Err(Error::InvalidInput)
     );
     assert_eq!(
@@ -168,7 +168,7 @@ fn one_batch_holds_shared_capacity_until_the_absolute_deadline_then_releases_it(
     let handle = std::thread::spawn(move || {
         let fields = input();
         let proof = [0; 32];
-        verifier.verify_batch_before(&vec![(&fields[..], &proof[..]); 65], deadline)
+        verifier.verify_batch_before(&[(&fields[..], &proof[..]); 65], deadline)
     });
     while !receipt.is_file() && Instant::now() < deadline {
         std::thread::sleep(Duration::from_millis(5));

@@ -28,7 +28,7 @@ fn main() {
             std::thread::sleep(Duration::from_secs(60));
         }
         "oversize" => {
-            std::io::stdout().write_all(&vec![b'x'; 8192]).unwrap();
+            std::io::stdout().write_all(&[b'x'; 8192]).unwrap();
         }
         "partial" => print!("{{"),
         "empty" => (),
