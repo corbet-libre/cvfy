@@ -33,5 +33,5 @@ cache_outputs = ["Cargo.lock"]
 [jobs.resolve-dependencies]
 scheduler = "crow"
 checks = ["resolve-dependencies"]
-workflow = "dependency-resolution"
+workflow = "repository-jobs"
 command = ["bash", ".ci/run-cached.sh"]
