@@ -48,6 +48,8 @@ node --input-type=module -e 'import {readFileSync,writeFileSync} from "node:fs";
 export CVFY_FIXTURE_SOURCE="$PWD/fixture-source"
 CVFY_LAST_GATE='cargo-test'
 cargo test --locked --features test-worker
+CVFY_LAST_GATE='deadline-regression-control'
+python3 -B .ci/test-native-deadline.py
 
 CVFY_LAST_GATE='nightly-versions'
 rustup run nightly rustc --version

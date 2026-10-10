@@ -30,6 +30,15 @@ pub(super) fn verify(
     bytes: Vec<u8>,
     deadline: Instant,
 ) -> Result<(), Error> {
+    verify_with_completion_clock(config, bytes, deadline, Instant::now)
+}
+
+fn verify_with_completion_clock(
+    config: &NativeVerifierConfig,
+    bytes: Vec<u8>,
+    deadline: Instant,
+    completion_clock: impl Fn() -> Instant,
+) -> Result<(), Error> {
     check_deadline(Instant::now(), deadline)?;
     let mut command = Command::new(&config.executable);
     command.env_clear();
@@ -73,7 +82,7 @@ pub(super) fn verify(
         }
     };
     // Even successful exit is refused when observed at/after the deadline.
-    let timely = check_deadline(Instant::now(), deadline);
+    let timely = check_deadline(completion_clock(), deadline);
     drop(worker);
     let wrote = writer.join().ok().is_some_and(|result| result.is_ok());
     let output = reader
@@ -81,7 +90,7 @@ pub(super) fn verify(
         .or(Err(Error::CryptoProvider))?
         .or(Err(Error::CryptoProvider))?;
     timely?;
-    check_deadline(Instant::now(), deadline)?;
+    check_deadline(completion_clock(), deadline)?;
     if !wrote || !status.is_some_and(|value| value.success()) || output.len() > 4096 {
         return Err(Error::CryptoProvider);
     }
@@ -89,7 +98,7 @@ pub(super) fn verify(
     if !verdict.verified || verdict.proof_scope != config.scope {
         return Err(Error::CryptoProvider);
     }
-    check_deadline(Instant::now(), deadline)
+    check_deadline(completion_clock(), deadline)
 }
 
 #[cfg(test)]

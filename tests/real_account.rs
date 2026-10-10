@@ -1,66 +1,14 @@
 //! Real retained account proofs qualify the maintained native SDK and public inputs.
 use cvfy::{NativeVerifier, NativeVerifierConfig};
-use czkp::{ProofScope, native::SRS_G1_BYTES};
 use data_encoding::HEXLOWER;
-use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use std::{
-    fs,
-    path::PathBuf,
-    time::{Duration, Instant},
-};
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Record {
-    public_inputs: Vec<[u8; 32]>,
-    proof: String,
-    proof_scope: ProofScope,
-}
+use std::time::{Duration, Instant};
+#[path = "support/account_fixture.rs"]
+mod account_fixture;
 
 #[test]
 fn maintained_account_proofs_bind_all_inputs_and_refuse_tampering() {
-    let source = PathBuf::from(
-        std::env::var_os("CVFY_FIXTURE_SOURCE").expect("CI must provide real proof fixtures"),
-    );
-    let directory = source.join(".proof-test");
-    let records: Vec<Record> =
-        serde_json::from_slice(&fs::read(directory.join("native-records.json")).unwrap()).unwrap();
-    assert_eq!(records.len(), 2);
-    let manifest: serde_json::Value =
-        serde_json::from_slice(&fs::read(directory.join("manifest.json")).unwrap()).unwrap();
-    let key = fs::read(directory.join("vk.bin")).unwrap();
-    let mut g1 = fs::read(directory.join("setup/g1.dat")).unwrap();
-    let g2 = fs::read(directory.join("setup/g2.dat")).unwrap();
-    for (name, bytes) in [("g1.dat", &g1), ("g2.dat", &g2)] {
-        let item = manifest["setup"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|item| item["name"] == name)
-            .unwrap();
-        assert_eq!(item["bytes"].as_u64().unwrap() as usize, bytes.len());
-        assert_eq!(
-            item["sha256"].as_str().unwrap(),
-            HEXLOWER.encode(&Sha256::digest(bytes))
-        );
-    }
-    g1.truncate(SRS_G1_BYTES);
-    let config = NativeVerifierConfig {
-        executable: PathBuf::from(
-            std::env::var_os("CVFY_BB").expect("CI must build the native worker"),
-        ),
-        scope: records[0].proof_scope.clone(),
-        timeout: Duration::from_secs(180),
-        maximum_parallel: 1,
-        max_proof_bytes: 1024 * 1024,
-        max_public_inputs: 243,
-        threads: 1,
-        memory_megabytes: 4096,
-        verification_key: key,
-        srs_g1: g1,
-        srs_g2: g2.try_into().unwrap(),
-    };
+    let (config, records) = account_fixture::fixture();
     let verifier = NativeVerifier::new(config.clone()).unwrap();
     let proofs: Vec<_> = records
         .iter()
@@ -102,6 +50,10 @@ fn maintained_account_proofs_bind_all_inputs_and_refuse_tampering() {
     );
     let mut wrong_key = config;
     wrong_key.verification_key[0] ^= 1;
+    // The host-authenticated byte identity is checked before native dispatch.
+    assert!(NativeVerifier::new(wrong_key.clone()).is_err());
+    // An explicitly trusted but truncated key must still fail upstream parsing.
+    wrong_key.verification_key.pop();
     wrong_key.scope.verifying_key_digest = Sha256::digest(&wrong_key.verification_key).into();
     assert!(
         NativeVerifier::new(wrong_key)
