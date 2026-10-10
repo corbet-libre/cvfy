@@ -56,6 +56,8 @@ cargo_bin=$("$CARGO_HOME/bin/rustup" which --toolchain stable cargo)
 test -x "$cargo_bin"
 export PATH="$(dirname "$cargo_bin"):$PATH"
 export CCID_SOURCE_REVISION="$CI_COMMIT_SHA"
+export ARTIFACT_ROOT="${ARTIFACT_ROOT:-$state/release-artifacts}"
+mkdir -p "$ARTIFACT_ROOT"
 "$CCID_BIN" render --repo "$PWD" --check
 proto --version
 moon --version
@@ -75,7 +77,7 @@ echo 'cvfy:stage=fixture-resolve'
 # verify cache key. Exact CI commands and flags; github URL rides the job's
 # Forgejo insteadOf rewrite, same as cargo's first-party git fetches.
 rm -rf fixture-source fixture-source.tar fixture-package-lock.json fixture-source.txt
-git clone --depth 1 https://github.com/corbet-libs/cblc.git fixture-source
+git clone --depth 1 https://git.corbet.ch/corbet-libs/cblc.git fixture-source
 git -C fixture-source rev-parse HEAD > fixture-source.txt
 (cd fixture-source && npm update --package-lock-only --ignore-scripts --no-audit --no-fund)
 (cd fixture-source && git archive HEAD > ../fixture-source.tar)
