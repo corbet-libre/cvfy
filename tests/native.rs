@@ -69,6 +69,12 @@ fn configuration_authenticates_identity_and_every_resource_bound() {
                 bad.verification_key[0] ^= 1;
             }
         }
+        // These cases authenticate the supplied key bytes so the distinct
+        // empty/oversized-key resource guard, not an earlier hash mismatch,
+        // must refuse the configuration.
+        if matches!(case, 3 | 4) {
+            bad.scope.verifying_key_digest = Sha256::digest(&bad.verification_key).into();
+        }
         assert!(
             matches!(NativeVerifier::new(bad), Err(Error::InvalidInput)),
             "case {case}"

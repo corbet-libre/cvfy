@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 exec 2>&1
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }${BB_NATIVE_RUSTFLAGS:?Missing native loader configuration}"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}"
 export CARGO_TERM_COLOR="${CARGO_TERM_COLOR:-always}"
 CVFY_LAST_GATE='init'

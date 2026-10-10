@@ -27,6 +27,7 @@ in pkgs.mkShell {
   ];
   LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
   BB_LIB_DIR = "${bbLibrary}/lib";
+  BB_NATIVE_RUSTFLAGS = "-C link-arg=-Wl,-rpath,${pkgs.lib.makeLibraryPath [ pkgs.llvmPackages.libcxx ]}";
   shellHook = ''
     export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [ pkgs.llvmPackages.libclang.lib pkgs.llvmPackages.libcxx ]}:''${LD_LIBRARY_PATH:-}";
   '';
