@@ -2,6 +2,9 @@ schema = 1
 project = "cvfy"
 
 [checks.verify]
+# This integration check regenerates a fresh upstream proof fixture.
+# Keep every substantive gate; avoid reusing a cached fixture execution.
+cache = false
 kind = "commands"
 commands = [["bash", ".ci/verify.sh"]]
 cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["node", "--version"], ["npm", "--version"], ["python3", "--version"], ["rustup", "run", "nightly", "rustc", "-vV"], ["rustup", "run", "nightly", "cargo", "llvm-cov", "--version"]]
