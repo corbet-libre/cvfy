@@ -6,8 +6,8 @@ exec 2>&1
 : "${CI_COMMIT_SHA:?Missing verified source revision}"
 : "${CI_REPOSITORY_URL:?Missing canonical repository identity}"
 : "${CHECKS:?Missing declared check selection}"
-if [ "$CHECKS" != "verify,advisories" ]; then
-  echo "CHECKS must be exactly 'verify,advisories', got: $CHECKS" >&2
+if [ "$CHECKS" != "verify,advisories" ] && [ "$CHECKS" != "resolve-dependencies" ]; then
+  echo "CHECKS must be verify,advisories or resolve-dependencies, got: $CHECKS" >&2
   exit 2
 fi
 cache_root=${CI_CACHE_ROOT:-${CARGO_HOME:-}}
@@ -70,6 +70,9 @@ python3 --version
 cargo-deny --version
 rustup run nightly rustc -vV
 rustup run nightly cargo llvm-cov --version
+if [ "$CHECKS" = "resolve-dependencies" ]; then
+  exec "$CCID_BIN" check --repo "$PWD" --check "$CHECKS"
+fi
 echo 'cvfy:stage=fixture-resolve'
 # Fresh resolve of the real public accounting fixture (port of the ci.yml
 # resolve job "Resolve real public accounting fixture source once"): this
@@ -85,6 +88,16 @@ git -C fixture-source rev-parse HEAD > fixture-source.txt
 cp fixture-source/package-lock.json fixture-package-lock.json
 export CVFY_FIXTURE_HEAD="$(cat fixture-source.txt)"
 export CVFY_FIXTURE_LOCK_SHA="$(sha256sum fixture-package-lock.json | cut -d ' ' -f1)"
-"$CCID_BIN" cached --repo "$PWD" --check verify
-test -s ".ccid/results/verify.jsonl"
-"$CCID_BIN" check --repo "$PWD" --check advisories
+retain_coverage() {
+  local status=$?
+  trap - EXIT
+  for report in coverage.json coverage.lcov coverage.txt fixture-source.txt fixture-package-lock.json; do
+    if [[ -f "$report" && ! -L "$report" ]]; then
+      mkdir -p "$ARTIFACT_ROOT/$CI_COMMIT_SHA" || status=1
+      cp -- "$report" "$ARTIFACT_ROOT/$CI_COMMIT_SHA/$report" || status=1
+    fi
+  done
+  exit "$status"
+}
+trap retain_coverage EXIT
+nix-shell .ci/check-shell.nix --run 'export PATH="$(dirname "$CCID_BIN"):$PATH"; set -e; "$CCID_BIN" cached --repo "$PWD" --check verify; test -s ".ccid/results/verify.jsonl"; exec "$CCID_BIN" check --repo "$PWD" --check advisories'

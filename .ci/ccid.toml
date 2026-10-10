@@ -23,3 +23,15 @@ scheduler = "crow"
 checks = ["verify", "advisories"]
 workflow = "repository-jobs"
 command = ["bash", ".ci/run-cached.sh"]
+
+[checks.resolve-dependencies]
+kind = "commands"
+commands = [["bash", ".ci/resolve-dependencies.sh"]]
+cache = false
+cache_outputs = ["Cargo.lock"]
+
+[jobs.resolve-dependencies]
+scheduler = "crow"
+checks = ["resolve-dependencies"]
+workflow = "dependency-resolution"
+command = ["bash", ".ci/run-cached.sh"]
