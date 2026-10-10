@@ -18,6 +18,18 @@ cargo fmt --check || { cargo fmt; git diff > formatting.patch; exit 1; }
 CVFY_LAST_GATE='clippy'
 cargo clippy --locked --all-targets --features test-worker -- -D warnings
 
+CVFY_LAST_GATE='worker-build'
+cargo build --locked --example czkp_bb_worker
+cvfy_target_dir="${CARGO_TARGET_DIR:-target}"
+export CVFY_BB="$(realpath "$cvfy_target_dir/debug/examples/czkp_bb_worker")"
+# Prove that the executable loads with the production cleared environment.
+# Empty input must reach the owned refusal, not fail in the dynamic loader.
+set +e
+env -i CZKP_NATIVE_MEMORY_MIB=256 "$CVFY_BB" </dev/null
+cvfy_worker_status=$?
+set -e
+test "$cvfy_worker_status" -eq 1
+
 CVFY_LAST_GATE='fixture-unpack'
 # Consumes the fresh fixture prepared by run-cached.sh (fixture-resolve
 # stage): fixture-source.tar + fixture-package-lock.json are regenerated
@@ -34,9 +46,6 @@ CVFY_LAST_GATE='fixture-config'
 node --input-type=module -e 'import {readFileSync,writeFileSync} from "node:fs"; import {resolve} from "node:path"; const p=resolve("fixture-source/.proof-test/config.json"); const c=JSON.parse(readFileSync(p)); c.directory=resolve("fixture-source/.proof-test"); writeFileSync(p,JSON.stringify(c));'
 export CVFY_FIXTURE_SOURCE="$PWD/fixture-source"
 CVFY_LAST_GATE='cargo-test'
-cargo build --locked --example czkp_bb_worker
-cvfy_target_dir="${CARGO_TARGET_DIR:-target}"
-export CVFY_BB="$(realpath "$cvfy_target_dir/debug/examples/czkp_bb_worker")"
 cargo test --locked --features test-worker
 
 CVFY_LAST_GATE='nightly-versions'
