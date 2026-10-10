@@ -9,6 +9,9 @@ use std::{
 fn main() {
     let executable = PathBuf::from(std::env::args_os().next().unwrap());
     let mode = executable.file_stem().unwrap().to_str().unwrap();
+    if mode == "early_exit" {
+        return;
+    }
     if mode == "hang" {
         std::fs::write(executable.with_extension("receipt"), "started").unwrap();
         std::thread::sleep(Duration::from_secs(60));

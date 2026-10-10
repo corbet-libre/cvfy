@@ -10,10 +10,10 @@ original = path.read_bytes()
 name = "native::transport::tests::a_genuine_proof_observed_after_its_deadline_is_refused"
 try:
     source = original.decode()
-    admission = "    check_deadline(Instant::now(), deadline)?;"
+    admission = "        check_deadline(Instant::now(), deadline)?;"
     if source.count(admission) != 1 or source.count("completion_clock()") != 3:
         raise SystemExit("native deadline control source drift")
-    source = source.replace(admission, "    let admitted_at = Instant::now();\n    check_deadline(admitted_at, deadline)?;")
+    source = source.replace(admission, "        let admitted_at = Instant::now();\n        check_deadline(admitted_at, deadline)?;")
     source = source.replace("completion_clock()", "admitted_at")
     path.write_text(source)
     result = subprocess.run(

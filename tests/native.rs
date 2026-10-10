@@ -137,6 +137,7 @@ fn input_limits_refuse_before_dispatch_and_leave_capacity_available() {
 fn real_process_refusals_are_bounded_and_diagnostics_are_redacted() {
     let directory = tempfile::tempdir().unwrap();
     for mode in [
+        "early_exit",
         "oversize",
         "partial",
         "empty",
