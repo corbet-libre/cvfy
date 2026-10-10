@@ -29,7 +29,7 @@ cp fixture-package-lock.json fixture-source/package-lock.json
 CVFY_LAST_GATE='fixture-npm-ci'
 npm ci --ignore-scripts --no-audit --no-fund --prefix fixture-source
 CVFY_LAST_GATE='fixture-real-proof'
-(cd fixture-source && node tests/real-proof.mjs && node .ci/native-fixture-inputs.ts)
+(cd fixture-source && node .ci/check-fixture-suite.ts && node tests/real-proof.mjs && node .ci/native-fixture-inputs.ts)
 CVFY_LAST_GATE='fixture-config'
 node --input-type=module -e 'import {readFileSync,writeFileSync} from "node:fs"; import {resolve} from "node:path"; const p=resolve("fixture-source/.proof-test/config.json"); const c=JSON.parse(readFileSync(p)); c.directory=resolve("fixture-source/.proof-test"); writeFileSync(p,JSON.stringify(c));'
 export CVFY_FIXTURE_SOURCE="$PWD/fixture-source"
