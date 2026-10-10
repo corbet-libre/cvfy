@@ -1,15 +1,11 @@
 # cvfy
 
-`ProcessVerifier::verify` checks a serializable public statement and proof using a configured worker. Circuit/VK scope, executable, artifacts, concurrency, input size, memory and deadline are host configuration. Requests cannot select them. Failures expose no child stderr or proof data. The same instance shares a concurrency bound across clones; timeout kills and reaps the worker. It stores nothing.
+`NativeVerifier` checks ordered public field elements and upstream proofs through an isolated Rust worker. It reserves one shared admission slot and one absolute deadline for a whole batch. Circuit/key identity, executable, authenticated setup bytes, threads, memory and size limits come from the host. Requests cannot select them. All request and artifact data stays in RAM; errors expose no native diagnostics.
 
-Survey (2026-09-30): retain [Noir](https://github.com/noir-lang/noir) / [Barretenberg](https://github.com/AztecProtocol/aztec-packages/tree/next/barretenberg), via the upstream `@aztec/bb.js` worker migrated into cblc. A native ACVM executor is not a proof verifier; a different proof system would invalidate existing artifacts. The Rust wrapper uses std process APIs, serde and [czkp](https://github.com/corbet-foss/czkp) wire types. No own crypto. The worker must validate every public input and pinned artifact. `verified: true` from an arbitrary worker is not cryptographic evidence; executable configuration is trusted.
+Cryptography stays in maintained [Barretenberg's official Rust API](https://github.com/AztecProtocol/aztec-packages/tree/v5.2.1/barretenberg/rust/barretenberg-rs), through [czkp](https://git.corbet.ch/corbet-foss/czkp). Owned crates forbid unsafe code. Upstream FFI and native cryptography run in a separate bounded process. No Node runtime or owned cryptographic implementation is involved.
 
-GitHub Actions runs stable Rust formatting, clippy with warnings denied, and tests. No workstation builds. See [CONTRACT](docs/CONTRACT.md).
+The host must supply the trusted `czkp-bb-worker` executable, not an arbitrary program or the upstream `bb` CLI. The latter initializes filesystem/network CRS handling. The owned worker initializes only the supplied authenticated memory CRS through the official API. Real account and extension proof replays qualify SDK upgrades against the existing proof format; a dependency version match alone does not establish compatibility.
+
+See [the contract](docs/CONTRACT.md) and [coverage evidence](docs/COVERAGE.md). Build and verification run in CI, with current compatible manifest versions and a retained tested lockfile.
 
 Copyright 2026 Julian Y. Richard Corbet. LGPL-3.0-only WITH LGPL-3.0-linking-exception; see [LICENSE.md](LICENSE.md).
-
-## Continuous verification
-
-Dependency updates follow main and are tested against one CI-resolved lockfile.
-Line and branch coverage target 100%; failures remain blocking. See
-[the coverage contract](docs/COVERAGE.md) for measurement and exclusions.
