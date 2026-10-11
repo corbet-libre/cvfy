@@ -212,3 +212,34 @@ fn blocked_input_is_killed_and_reaped_within_the_whole_call_timeout() {
         Err(Error::CryptoProvider)
     );
 }
+
+#[test]
+fn host_cancellation_kills_owned_process_and_permanently_refuses_new_work() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut config = config(directory.path(), "hang");
+    config.timeout = Duration::from_secs(60);
+    let receipt = config.executable.with_extension("receipt");
+    let verifier = NativeVerifier::new(config).unwrap();
+    let cancellation = verifier.cancellation();
+    let worker = verifier.clone();
+    let task = std::thread::spawn(move || worker.verify(&input(), &[0; 32]));
+    let until = Instant::now() + Duration::from_secs(5);
+    while fs::read_to_string(&receipt).ok().as_deref() != Some("started") && Instant::now() < until
+    {
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    assert_eq!(fs::read_to_string(&receipt).unwrap(), "started");
+    let stopped_at = Instant::now();
+    cancellation.cancel();
+    assert_eq!(task.join().unwrap(), Err(Error::CryptoProvider));
+    assert!(stopped_at.elapsed() < Duration::from_secs(2));
+    fs::remove_file(&receipt).unwrap();
+    assert_eq!(
+        verifier.verify(&input(), &[0; 32]),
+        Err(Error::CryptoProvider)
+    );
+    assert!(
+        !receipt.exists(),
+        "a cancelled owner must not spawn another process"
+    );
+}

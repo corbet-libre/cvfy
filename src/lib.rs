@@ -2,4 +2,4 @@
 #![forbid(unsafe_code)]
 
 mod native;
-pub use native::{NativeCapacity, NativeVerifier, NativeVerifierConfig};
+pub use native::{NativeCancellation, NativeCapacity, NativeVerifier, NativeVerifierConfig};

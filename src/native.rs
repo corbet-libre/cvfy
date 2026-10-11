@@ -6,7 +6,7 @@ use std::{
     path::PathBuf,
     sync::{
         Arc,
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     },
     time::{Duration, Instant},
 };
@@ -72,11 +72,31 @@ impl Drop for Permit {
     }
 }
 
+/// One-way host cancellation. Clones only withdraw execution authority; this
+/// cannot reset a verifier, change its inputs, or produce an accepting verdict.
+#[derive(Clone, Default)]
+pub struct NativeCancellation(Arc<AtomicBool>);
+impl NativeCancellation {
+    /// Permanently refuse new work and stop the current owned process at its
+    /// next bounded poll, killing and reaping it before returning.
+    pub fn cancel(&self) {
+        self.0.store(true, Ordering::Release);
+    }
+    fn check(&self) -> Result<(), Error> {
+        if self.0.load(Ordering::Acquire) {
+            Err(Error::CryptoProvider)
+        } else {
+            Ok(())
+        }
+    }
+}
+
 /// Stateless verification with one isolated process and admission per batch.
 #[derive(Clone)]
 pub struct NativeVerifier {
     config: Arc<NativeVerifierConfig>,
     capacity: NativeCapacity,
+    cancellation: NativeCancellation,
 }
 impl NativeVerifier {
     /// Validate the host's immutable RAM snapshot and create its admission pool.
@@ -110,7 +130,12 @@ impl NativeVerifier {
         Ok(Self {
             config: Arc::new(config),
             capacity,
+            cancellation: NativeCancellation::default(),
         })
+    }
+    /// The host retains this handle when transferring the verifier to its actor.
+    pub fn cancellation(&self) -> NativeCancellation {
+        self.cancellation.clone()
     }
     /// Exact authenticated identity, independent of a caller-supplied statement.
     pub fn scope(&self) -> ProofScope {
@@ -138,6 +163,7 @@ impl NativeVerifier {
         requests: &[(&[[u8; 32]], &[u8])],
         deadline: Instant,
     ) -> Result<(), Error> {
+        self.cancellation.check()?;
         let now = Instant::now();
         let deadline = deadline.min(now + self.config.timeout);
         transport::check_deadline(now, deadline)?;
@@ -193,6 +219,6 @@ impl NativeVerifier {
         serde_json::to_writer(&mut remaining, &request).or(Err(Error::InvalidInput))?;
         let written = wire::MAX_REQUEST_BYTES - remaining.len();
         bytes.truncate(written);
-        transport::verify(&self.config, bytes, deadline)
+        transport::verify(&self.config, bytes, deadline, &self.cancellation)
     }
 }

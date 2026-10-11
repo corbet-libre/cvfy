@@ -1,4 +1,4 @@
-use super::NativeVerifierConfig;
+use super::{NativeCancellation, NativeVerifierConfig};
 use czkp::{Error, native::Verdict};
 use std::{
     io::{Read, Write},
@@ -29,17 +29,20 @@ pub(super) fn verify(
     config: &NativeVerifierConfig,
     bytes: Vec<u8>,
     deadline: Instant,
+    cancellation: &NativeCancellation,
 ) -> Result<(), Error> {
-    verify_with_completion_clock(config, bytes, deadline, Instant::now)
+    verify_with_completion_clock(config, bytes, deadline, cancellation, Instant::now)
 }
 
 fn verify_with_completion_clock(
     config: &NativeVerifierConfig,
     bytes: Vec<u8>,
     deadline: Instant,
+    cancellation: &NativeCancellation,
     completion_clock: impl Fn() -> Instant,
 ) -> Result<(), Error> {
     thread::scope(|threads| {
+        cancellation.check()?;
         check_deadline(Instant::now(), deadline)?;
         let mut command = Command::new(&config.executable);
         command.env_clear();
@@ -78,7 +81,9 @@ fn verify_with_completion_clock(
         let status = loop {
             match worker.0.try_wait() {
                 Ok(Some(status)) => break Some(status),
-                Ok(None) if Instant::now() < deadline => thread::sleep(Duration::from_millis(2)),
+                Ok(None) if cancellation.check().is_ok() && Instant::now() < deadline => {
+                    thread::sleep(Duration::from_millis(2))
+                }
                 _ => break None,
             }
         };
@@ -94,6 +99,7 @@ fn verify_with_completion_clock(
             .join()
             .or(Err(Error::CryptoProvider))?
             .or(Err(Error::CryptoProvider))?;
+        cancellation.check()?;
         timely?;
         check_deadline(completion_clock(), deadline)?;
         if !wrote || !status.is_some_and(|value| value.success()) || output.len() > 4096 {
@@ -103,6 +109,7 @@ fn verify_with_completion_clock(
         if !verdict.verified || verdict.proof_scope != config.scope {
             return Err(Error::CryptoProvider);
         }
+        cancellation.check()?;
         check_deadline(completion_clock(), deadline)
     })
 }

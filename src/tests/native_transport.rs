@@ -41,14 +41,26 @@ fn a_genuine_proof_observed_after_its_deadline_is_refused() {
     .unwrap();
     let deadline = Instant::now() + config.timeout;
     assert_eq!(
-        verify_with_completion_clock(&config, bytes.clone(), deadline, Instant::now),
+        verify_with_completion_clock(
+            &config,
+            bytes.clone(),
+            deadline,
+            &NativeCancellation::default(),
+            Instant::now
+        ),
         Ok(())
     );
     // Only the observation clock advances; the same real native verifier must
     // finish successfully. A failed proof cannot make this refusal test pass.
     let deadline = Instant::now() + config.timeout;
     assert_eq!(
-        verify_with_completion_clock(&config, bytes, deadline, || deadline),
+        verify_with_completion_clock(
+            &config,
+            bytes,
+            deadline,
+            &NativeCancellation::default(),
+            || deadline
+        ),
         Err(Error::CryptoProvider),
         "late completion must not authorize a valid proof"
     );
