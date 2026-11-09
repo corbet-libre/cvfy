@@ -3,7 +3,7 @@ use cvfy::{NativeVerifier, NativeVerifierConfig};
 use data_encoding::HEXLOWER;
 use sha2::{Digest, Sha256};
 use std::time::{Duration, Instant};
-#[path = "support/account_fixture.rs"]
+#[path = "../support/account_fixture.rs"]
 mod account_fixture;
 
 #[test]

@@ -8,11 +8,11 @@ Write comments and documentation in English. Owned code forbids unsafe Rust
 - `fmt -p cvfy -- --check` (exit 0)
 - `clippy -p cvfy --locked --all-targets --features test-worker -- -D warnings`
   (exit 0)
-- `test -p cvfy --locked --features test-worker --test native` (exit 0:
+- `test -p cvfy --locked --features test-worker --test it` (exit 0:
   6 refusal/config/bound tests; no crypto acceptance claimed)
 - CI-only (GHA `.ci/verify.sh`): the full suite needs `CVFY_FIXTURE_SOURCE`
   (real upstream proofs) and `BB_NATIVE_RUSTFLAGS`; genuine acceptance
-  (`tests/real_account.rs`), `cargo deny`, coverage (`docs/COVERAGE.md`).
+  (`tests/it/real_account.rs`), `cargo deny`, coverage (`docs/COVERAGE.md`).
 
 ## Hard invariants (each with its enforcing test)
 
@@ -32,7 +32,7 @@ Write comments and documentation in English. Owned code forbids unsafe Rust
   `blocked_input_is_killed_and_reaped_within_the_whole_call_timeout`,
   `host_cancellation_kills_owned_process_and_permanently_refuses_new_work`.
 - Only retained upstream proofs accept; tampered proofs or inputs are refused
-  (`tests/real_account.rs`, CI fixtures):
+  (`tests/it/real_account.rs`, CI fixtures):
   `maintained_account_proofs_bind_all_inputs_and_refuse_tampering`.
 - A substituted executable is not evidence: scope and binary are trust
   configuration (`docs/CONTRACT.md:15`).
