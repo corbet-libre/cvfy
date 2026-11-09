@@ -5,7 +5,7 @@ edition = "2024"
 rust-version = "1.95"
 description = "Verifier for zero-knowledge accounting: checks a proof against a policy, pure and without trace"
 license = "LGPL-3.0-only WITH LGPL-3.0-linking-exception"
-repository = "https://git.corbet.ch/corbet-foss/cvfy"
+repository = "https://git.corbet.ch/corbet-foss/cvfy.git"
 readme = "README.md"
 publish = false
 include = ["Cargo.toml", "src/**", "README.md", "LICENSE", "LICENSE.md", "LICENSES/LGPL-3.0-only.txt", "LICENSES/LGPL-3.0-linking-exception.txt", "LICENSES/GPL-3.0-only.txt"]
@@ -27,7 +27,7 @@ unsafe_code = "forbid"
 missing_docs = "warn"
 
 [dependencies]
-czkp = { git = "https://git.corbet.ch/corbet-foss/czkp", branch = "main", features = ["native"] }
+czkp = { git = "https://git.corbet.ch/corbet-foss/czkp.git", branch = "main", features = ["native"] }
 data-encoding = "2.9"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -35,4 +35,4 @@ sha2 = "0.11"
 
 [dev-dependencies]
 tempfile = "3"
-czkp = { git = "https://git.corbet.ch/corbet-foss/czkp", branch = "main", features = ["native-worker"] }
+czkp = { git = "https://git.corbet.ch/corbet-foss/czkp.git", branch = "main", features = ["native-worker"] }
