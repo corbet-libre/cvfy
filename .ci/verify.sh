@@ -15,7 +15,6 @@ python3 .github/check-first-party.py
 CVFY_LAST_GATE='rustc-version'
 rustc --version
 CVFY_LAST_GATE='fmt'
-bash .ci/update-our-crates.sh
 cargo fmt --check || { cargo fmt; git diff > formatting.patch; exit 1; }
 CVFY_LAST_GATE='clippy'
 cargo clippy --locked --all-targets --features test-worker -- -D warnings
