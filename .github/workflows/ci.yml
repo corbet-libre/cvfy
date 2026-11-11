@@ -31,7 +31,7 @@ jobs:
 
         sha256sum Cargo.lock >> resolver.txt'
     - name: Resolve real public accounting fixture source once
-      run: 'git clone --depth 1 https://github.com/corbet-libs/cblc.git fixture-source
+      run: 'git clone --depth 1 https://git.corbet.ch/corbet-fsl/cblc.git fixture-source
 
         git -C fixture-source rev-parse HEAD > fixture-source.txt
 
