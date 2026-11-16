@@ -20,7 +20,6 @@ mkdir -p "$state" "$toolchains"
 exec 9>"$state/lock"
 flock -w "${CI_TIMEOUT:-2700}" 9
 mkdir -p "$state/moon-cache/hashes" "$state/moon-cache/outputs" "$state/moon-home"
-mkdir -p .moon/cache
 # Tool installation is an explicit part of this job, in persistent CI storage.
 # Node 24 matches all three ci.yml setup-node steps; npm ships with nix nodejs
 # and serves the fixture `npm ci` + proofs generation (see verify.sh).
