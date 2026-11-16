@@ -162,35 +162,62 @@ fn real_process_refusals_are_bounded_and_diagnostics_are_redacted() {
 
 #[test]
 fn one_batch_holds_shared_capacity_until_the_absolute_deadline_then_releases_it() {
+    // The deadline is the property; its length is this test's choice. Observing the hold needs
+    // the worker to have received the whole batch while the deadline is still ahead, and process
+    // start-up time belongs to the machine (under heavy load it exceeded 3 s). An attempt whose
+    // worker had not started shows nothing about the hold, yet must still end at its deadline and
+    // release the capacity; the next attempt doubles the window. Some attempt must show the hold.
+    for seconds in [3, 6, 12, 24, 48] {
+        if batch_holds_capacity_until_its_deadline(Duration::from_secs(seconds)) {
+            return;
+        }
+    }
+    panic!("the batch worker never received the batch before a 48 s deadline");
+}
+
+/// One attempt with an absolute deadline `window` ahead. True when the hold was observed: one
+/// worker received all 65 proofs and a second verifier on the same capacity was refused.
+fn batch_holds_capacity_until_its_deadline(window: Duration) -> bool {
     let directory = tempfile::tempdir().unwrap();
     let mut batch = config(directory.path(), "batch");
-    batch.timeout = Duration::from_secs(10);
+    // The deadline, never this per-call timeout, must end the batch.
+    batch.timeout = window + Duration::from_secs(7);
     let receipt = batch.executable.with_extension("receipt");
     let capacity = NativeCapacity::new(1).unwrap();
     let verifier = NativeVerifier::with_capacity(batch, capacity.clone()).unwrap();
     let second =
         NativeVerifier::with_capacity(config(directory.path(), "refuse"), capacity).unwrap();
     let started = Instant::now();
-    let deadline = started + Duration::from_secs(3);
+    let deadline = started + window;
     let handle = std::thread::spawn(move || {
         let fields = input();
         let proof = [0; 32];
         verifier.verify_batch_before(&[(&fields[..], &proof[..]); 65], deadline)
     });
-    while !receipt.is_file() && Instant::now() < deadline {
+    // The worker's written receipt is the readiness signal (the file exists, empty, for a moment
+    // before its content); the batch call itself ends by the deadline.
+    let written = || {
+        fs::read_to_string(&receipt)
+            .ok()
+            .filter(|text| !text.is_empty())
+    };
+    while written().is_none() && !handle.is_finished() {
         std::thread::sleep(Duration::from_millis(5));
     }
-    assert_eq!(fs::read_to_string(receipt).unwrap(), "65");
-    assert_eq!(
-        second.clone().verify(&input(), &[0; 32]),
-        Err(Error::Capacity)
-    );
+    let held = written().is_some_and(|count| {
+        assert_eq!(count, "65");
+        let probe = second.clone().verify(&input(), &[0; 32]);
+        // A free capacity is only legitimate once the deadline has passed.
+        assert!(probe == Err(Error::Capacity) || Instant::now() >= deadline);
+        probe == Err(Error::Capacity)
+    });
     assert_eq!(handle.join().unwrap(), Err(Error::CryptoProvider));
-    assert!(started.elapsed() < Duration::from_secs(6));
+    assert!(started.elapsed() < window + Duration::from_secs(3));
     assert_eq!(
         second.verify(&input(), &[0; 32]),
         Err(Error::CryptoProvider)
     );
+    held
 }
 
 #[test]
